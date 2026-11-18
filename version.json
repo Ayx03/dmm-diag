@@ -1,0 +1,7 @@
+{
+  "versionCode": 1,
+  "versionName": "1.0",
+  "size": "40.4 KB",
+  "url": "https://g.imayx.top/dmm-diag/dmm-diag.apk",
+  "notes": "首个版本：直接调用 DMM TV 官方接口 client.isForeignAccess 做地区判定，另含域名连通 / Widevine / Google 服务检测"
+}
