@@ -179,6 +179,22 @@ App 会调 api.tv.dmm.com 做地区判定和内容接口，一步不过就直接
 先按顺序排除：① 用官方 Chrome 打开本页复测；② 下载下方 App 试一次；③ 两个都报错才是设备真的没有 Widevine。
 确定是设备问题后：换其他品牌的安卓手机、iPhone / iPad，或者用电脑 Chrome / Edge 观看。</div></details>
 
+<details><summary>iPad / iPhone 上播放弹「エラーが発生しました」</summary><div class="ans">iOS 版的这条弹窗是通用错误，它不告诉你具体原因（安卓版会区分「地区限制」「设备不支持」「未購買」等，iOS 版没这么细）。所以不能从这句话直接判断。
+
+按顺序排查，三步就能定位：
+
+① 在 iPad 的 Safari 里打开本页，看「出口」那一栏是不是 Japan。
+　如果不是 Japan —— VPN 没生效，或者不是日本节点。这是最常见的原因。
+
+② 在 Safari 里直接打开 tv.dmm.com 播同一个作品。
+　能播 → 问题在 App（缓存或版本），删掉 App 重装再试；
+　不能播 → 问题在账号或节点。
+
+③ 换一个日本节点再试。同一个机场不同 IP 的结果可能不一样。
+
+⚠️ 注意：iPad 上的 DNS 缓存和 App 缓存都会「记住」之前的错误状态。
+换完节点后，先把 DMM TV 从后台彻底划掉再重开，必要时重启一次 iPad。</div></details>
+
 <details><summary>代开需要提供什么？安全吗</summary><div class="ans">只需要提供 DMM 的账号和密码，我们登录后完成订阅。
 不需要你提供 Google 账号、不需要信用卡、不需要手机验证码。
 
@@ -195,6 +211,7 @@ function esc(s){ return String(s).replace(/[<>&]/g, function(c){ return {'<':'&l
 /* ---------------- 浏览器身份 ---------------- */
 var UA = navigator.userAgent || "";
 var IS_ANDROID    = /Android/.test(UA);
+var IS_IOS        = /iPad|iPhone|iPod/.test(UA) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 var IS_EDGE_FAMILY = /Edg\/|EdgA\/|EdgiOS\//.test(UA);
 var IS_CHROME     = /Chrome\//.test(UA) && !IS_EDGE_FAMILY && !/OPR\/|SamsungBrowser|Firefox/.test(UA);
 var IS_WECHAT     = /MicroMessenger|WeChat\/|wxwork|MMWEBSDK|XWEB\//i.test(UA);
@@ -406,6 +423,18 @@ function checkDRM(){
       .catch(function(){ return tryLevel(i+1); });
   }
 
+  // iOS / iPadOS 用的是 FairPlay，根本没有 Widevine —— 不能报"不支持"
+  if (IS_IOS) {
+    R.drm = { ok:true, level:"FairPlay（iOS）", ios:true };
+    $('drm').innerHTML =
+      row('DRM 方案', '<span class="ok">FairPlay（iOS 系统级）</span>') +
+      row('说明', '<span class="dimc">iPad / iPhone 用 Apple 的 FairPlay，不走 Widevine，天然支持受保护播放</span>') +
+      '<div class="tip">iOS 上不存在「缺 Widevine」的问题，所以这一项不影响你的判定。' +
+      '如果 App 播放报错，原因在地区或账号，不在 DRM。</div>';
+    updateVerdict();
+    return;
+  }
+
   if (!navigator.requestMediaKeySystemAccess) {
     R.drm = { ok:false };
     $('drm').innerHTML = row('Widevine', '<span class="bad">本浏览器不支持 DRM 检测</span>');
@@ -472,7 +501,7 @@ function updateVerdict(){
     return;
   }
   var wv = webviewCheck();
-  if (R.drm && !R.drm.ok) {
+  if (R.drm && !R.drm.ok && !IS_IOS) {
     if (!IS_CHROME) {
       setV('#d29922', '这个浏览器测不出 Widevine —— 不代表设备不行',
         '您现在用的不是官方 Chrome' + (wv.yes ? '，而且已被识别为 WebView 内核（' + wv.why + '）' : '') + '。\n' +
